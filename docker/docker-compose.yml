@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./django/Dockerfile
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - mongodb
+    environment:
+      DJANGO_SETTINGS_MODULE: my_project.settings
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: project_db
+      DB_USER: root
+      DB_PASSWORD: password
+      MONGO_URI: mongodb://mongodb:27017/project_db
+
+  celery:
+    build:
+      context: .
+      dockerfile: ./celery/Dockerfile
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      DJANGO_SETTINGS_MODULE: my_project.settings
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379" # Redis 서버의 포트를 호스트로 노출
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: capston
+    ports:
+      - "3307:3306" # MySQL 서버의 포트를 호스트로 노출
+    volumes:
+      - db_data:/var/lib/mysql # MySQL 데이터 영구 저장
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017" # MongoDB 서버의 포트를 호스트로 노출
+    volumes:
+      - mongo_data:/data/db # MongoDB 데이터 영구 저장
+    environment:
+      MONGO_INITDB_DATABASE: capston
+
+volumes:
+  db_data: # MySQL 데이터 저장용 볼륨
+  mongo_data: # MongoDB 데이터 저장용 볼륨
